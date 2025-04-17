@@ -30,6 +30,7 @@ export interface CodeblockParameters {
 		alternative: Record<string,Highlights>
 	},
 	ignore: boolean;
+	special?: boolean;
 	externalReference?: Reference;
 }
 export interface Highlights {
@@ -129,8 +130,8 @@ export function parseCodeblockParameters(parameterLine: string, theme: CodeStyle
 			alternative: {},
 		},
 		ignore: false,
+		special: false,
 	};
-
 	if (parameterLine.startsWith("```"))
 		parameterLine = parameterLine.replace(/^```+(?=[^`]|$)/,"");
 	else if (parameterLine.startsWith("~~~"))
@@ -143,7 +144,12 @@ export function parseCodeblockParameters(parameterLine: string, theme: CodeStyle
 		parameterLine = rmdMatch[1];
 
 	const languageBreak = parameterLine.indexOf(" ");
-	codeblockParameters.language = parameterLine.slice(0,(languageBreak !== -1)?languageBreak:parameterLine.length).toLowerCase();
+
+	const language = parameterLine.slice(0,(languageBreak !== -1)?languageBreak:parameterLine.length)
+	if (language.charAt(0).toLowerCase() != language.charAt(0)){
+		codeblockParameters.special = true
+	}
+	codeblockParameters.language = language.toLowerCase();
 	if (languageBreak === -1)
 		return codeblockParameters;
 	parameterLine = parameterLine.slice(languageBreak+1);
@@ -218,7 +224,7 @@ function pluginAdjustExecuteCode(codeblockParameters: CodeblockParameters, plugi
 	return codeblockParameters;
 }
 function pluginAdjustExecuteCodeRun(codeblockParameters: CodeblockParameters, plugin: CodeStylerPlugin, plugins: Record<string,ExternalPlugin>): CodeblockParameters {
-	if ("execute-code" in plugins) {
+	if ("execute-code" in plugin) {
 		if (EXECUTE_CODE_SUPPORTED_LANGUAGES.includes(codeblockParameters.language.slice(4)) && !isCodeblockIgnored(codeblockParameters.language,plugin.settings.processedCodeblocksWhitelist))
 			codeblockParameters.language = codeblockParameters.language.slice(4);
 	}

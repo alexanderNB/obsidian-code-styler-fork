@@ -3,10 +3,20 @@ import { Plugin, MarkdownView, WorkspaceLeaf } from "obsidian";
 import { convertSettings, DEFAULT_SETTINGS, LANGUAGES, CodeStylerSettings, REFERENCE_CODEBLOCK, EXTERNAL_REFERENCE_PATH, EXTERNAL_REFERENCE_CACHE } from "./Settings";
 import { SettingsTab } from "./SettingsTab";
 import { removeStylesAndClasses, updateStyling } from "./ApplyStyling";
-import { createCodeblockCodeMirrorExtensions, editingDocumentFold } from "./EditingView";
+import { createCodeblockCodeMirrorExtensions, editingDocumentFold, highlightExtension } from "./EditingView";
 import { destroyReadingModeElements, readingDocumentFold, executeCodeMutationObserver, readingViewCodeblockDecoratingPostProcessor, readingViewInlineDecoratingPostProcessor } from "./ReadingView";
 import { cleanExternalReferencedFiles, referenceCodeblockProcessor, updateExternalReferencedFiles } from "./Referencing";
 import { addModes, removeModes } from "./SyntaxHighlighting";
+import { tags } from "@codemirror/highlight";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+
+
+export const customPythonHighlighting = HighlightStyle.define([
+    { tag: tags.keyword, class: "cm-keyword" }, // Default keyword class
+    { tag: tags.keyword, class: "cm-keyword-def", match: /^def$/ }, // Custom class for 'def'
+    { tag: tags.keyword, class: "cm-keyword-if", match: /^if$/ },   // Custom class for 'if'
+]);
+export const customHighlightExtension = syntaxHighlighting(customPythonHighlighting);
 
 export default class CodeStylerPlugin extends Plugin {
 	settings: CodeStylerSettings;
@@ -22,7 +32,9 @@ export default class CodeStylerPlugin extends Plugin {
 		const settingsTab = new SettingsTab(this.app,this);
 		this.addSettingTab(settingsTab);
 
+
 		document.body.classList.add("code-styler"); // Load Styles
+		document.body.classList
 		updateStyling(this.settings,this.app);
 
 		this.languageIcons = Object.keys(LANGUAGES).reduce((result: {[key: string]: string}, key: string) => { // Load Icons
@@ -38,12 +50,24 @@ export default class CodeStylerPlugin extends Plugin {
 		this.executeCodeMutationObserver = executeCodeMutationObserver; // Add execute code mutation observer
 
 		addModes();
+
+		this.registerEditorExtension([
+			createCodeblockCodeMirrorExtensions(this.settings, this),
+			customHighlightExtension, // Add custom highlighting
+		]);
+
+
 		this.registerMarkdownCodeBlockProcessor(REFERENCE_CODEBLOCK, async (source, el, ctx) => { await referenceCodeblockProcessor(source, el, ctx, this);});
 
 		this.registerMarkdownPostProcessor(async (el,ctx) => {await readingViewCodeblockDecoratingPostProcessor(el,ctx,this);}); // Add codeblock decorating markdownPostProcessor
 		this.registerMarkdownPostProcessor(async (el,ctx) => {await readingViewInlineDecoratingPostProcessor(el,ctx,this);}); // Add inline code decorating markdownPostProcessor
 
 		this.registerEditorExtension(createCodeblockCodeMirrorExtensions(this.settings,this)); // Add codemirror extensions
+
+		this.registerInlineCodeProcessor();
+
+		this.registerEditorExtension(highlightExtension);
+
 
 		let zoomTimeout: NodeJS.Timeout = setTimeout(()=>{});
 		this.registerEvent(this.app.workspace.on("css-change",()=>{
@@ -111,6 +135,33 @@ export default class CodeStylerPlugin extends Plugin {
 		this.app.workspace.onLayoutReady(async () => this.initialiseOnLayout()); // Add decoration on enabling of plugin
 
 		console.log("Loaded plugin: Code Styler");
+	}
+
+	registerInlineCodeProcessor(): void {
+		this.registerMarkdownPostProcessor(async (el, ctx) => {
+			const inlineCodes = el.findAll(':not(pre) > code');
+			console.log(inlineCodes)
+			for (let codeElm of inlineCodes) {
+				console.log(codeElm)
+				const SHIKI_INLINE_REGEX = /^\{([^\s]+)\} (.*)/i;
+				let match = codeElm.textContent?.match(SHIKI_INLINE_REGEX); // format: `{lang} code`
+				console.log(match)
+				// if (match) {
+				// 	const highlight = await this.highlighter.getHighlightTokens(match[2], match[1]);
+				// 	const tokens = highlight?.tokens.flat(1);
+				// 	if (!tokens?.length) {
+				// 		continue;
+				// 	}
+
+				// 	codeElm.empty();
+				// 	codeElm.addClass('shiki-inline');
+
+				// 	for (let token of tokens) {
+				// 		this.highlighter.tokenToSpan(token, codeElm);
+				// 	}
+				// }
+			}
+		});
 	}
 
 	onunload(): void {

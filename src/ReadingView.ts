@@ -109,7 +109,7 @@ async function retriggerProcessor(element: HTMLElement, context: {sourcePath: st
 }
 
 async function remakeCodeblocks(codeblockPreElements: Array<HTMLElement>, codeblocksParameters: Array<CodeblockParameters>, sourcePath: string, dynamic: boolean, skipStyled: boolean, plugin: CodeStylerPlugin) {
-	if (codeblockPreElements.length !== codeblocksParameters.length)
+	if (codeblockPreElements.length !== codeblocksParameters.length || false)
 		return;
 	for (const [key,codeblockPreElement] of Array.from(codeblockPreElements).entries()) {
 		const codeblockParameters = codeblocksParameters[key];
@@ -179,18 +179,40 @@ async function getCodeblockPreElements(element: HTMLElement, specific: boolean,e
 }
 async function getCodeblocksParameters(sourcePath: string, cache: CachedMetadata | null, plugin: CodeStylerPlugin, editingEmbeds: boolean): Promise<Array<CodeblockParameters>> {
 	let codeblocksParameters: Array<CodeblockParameters> = [];
+	let tempCodedBlockParameters: Array<CodeblockParameters> = [];
 	const fileContentLines = await getFileContentLines(sourcePath,plugin);
-
 	if (typeof cache?.sections !== "undefined") {
 		for (const section of cache.sections) {
 			if (!editingEmbeds || section.type === "code" || section.type === "callout") {
 				const parsedCodeblocksParameters = await parseCodeblockSource(fileContentLines.slice(section.position.start.line,section.position.end.line+1),plugin,sourcePath);
-				if (!editingEmbeds || parsedCodeblocksParameters.nested)
+
+				if (parsedCodeblocksParameters.codeblocksParameters.length === 1){
+					let potentialSigularCBParameters = parsedCodeblocksParameters.codeblocksParameters.at(0)
+					if (typeof potentialSigularCBParameters !== "undefined"){
+						if (potentialSigularCBParameters.special){
+							tempCodedBlockParameters.push(potentialSigularCBParameters)
+						}
+					}
+					continue;
+				}
+
+				if (tempCodedBlockParameters.length !== 0){
+					console.warn("Temp thing not 0")
+					continue;
+				}
+
+				if (!editingEmbeds || parsedCodeblocksParameters.nested){
 					codeblocksParameters = codeblocksParameters.concat(parsedCodeblocksParameters.codeblocksParameters);
+				}
+					
 			}
 		}
 	} else
 		console.error(`Metadata cache not found for file: ${sourcePath}`);
+
+	if (tempCodedBlockParameters.length !== 0){
+		codeblocksParameters = tempCodedBlockParameters;
+	}
 	return codeblocksParameters;
 }
 function insertHeader(codeblockPreElement: HTMLElement, codeblockParameters: CodeblockParameters, sourcePath: string, plugin: CodeStylerPlugin, dynamic: boolean): void {

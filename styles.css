@@ -50,16 +50,15 @@ body {
   background: var(--code-styler-codeblock-background-colour) !important;
 }
 .code-styler pre.code-styler-pre[class*=language-] {
-  padding-left: var(--language-border-width) !important;
   background:
-    linear-gradient(
-      90deg,
-      var(--language-border-colour),
-      var(--language-border-colour) var(--language-border-width),
-      var(--code-styler-codeblock-background-colour) var(--language-border-width),
-      var(--code-styler-codeblock-background-colour) 100%),
     var(--code-styler-codeblock-background-colour) !important;
+
+  border: 
+    var(--language-border-width) solid var(--language-border-colour) !important;
 }
+
+
+
 .code-styler pre > code {
   padding-top: var(--code-padding) !important;
   padding-bottom: var(--code-padding) !important;
@@ -141,14 +140,26 @@ body.code-styler .markdown-source-view :not(pre.code-styler-pre) > .code-styler-
 }
 .code-styler .markdown-source-view .HyperMD-codeblock[class*=code-styler-line][class*=language-] {
   background:
-    linear-gradient(
-      90deg,
-      var(--language-border-colour),
-      var(--language-border-colour) var(--language-border-width),
-      var(--gradient-background-colour) var(--language-border-width) var(--gradient-highlights-colour-stop),
-      transparent 100%),
-    var(--code-styler-codeblock-background-colour) !important;
+  var(--code-styler-codeblock-background-colour) !important;
+
+  border-left: 
+  var(--language-border-width) solid var(--language-border-colour) !important;
+
+  border-right: 
+  var(--language-border-width) solid var(--language-border-colour) !important;
 }
+
+.code-styler .markdown-source-view .HyperMD-codeblock-begin[class*=code-styler-line][class*=language-] {
+  border-top: 
+  var(--language-border-width) solid var(--language-border-colour) !important;
+}
+
+.code-styler .markdown-source-view .HyperMD-codeblock-end[class*=code-styler-line][class*=language-] {
+  border-bottom: 
+  var(--language-border-width) solid var(--language-border-colour) !important;
+}
+
+
 .code-styler .markdown-source-view .HyperMD-codeblock[class*=code-styler-line][class*=language-] .code-styler-line-number {
   margin-left: var(--language-border-width);
 }
@@ -173,6 +184,10 @@ body .code-styler-header-container-hidden {
   border-top: var(--code-styler-header-border);
   border-right: var(--code-styler-header-border);
   border-left: var(--code-styler-header-border);
+
+
+
+  
   background:
     linear-gradient(
       var(--code-styler-header-background-colour) 0%,
@@ -182,6 +197,24 @@ body .code-styler-header-container-hidden {
     var(--language-border-colour) !important;
   border-top-left-radius: var(--border-radius);
   border-top-right-radius: var(--border-radius);
+
+
+  background:
+  var(--code-styler-codeblock-background-colour) !important;
+
+  border-top: 
+    var(--language-border-width) solid var(--language-border-colour) !important;
+
+
+  border-right: 
+    var(--language-border-width) solid var(--language-border-colour) !important;
+
+  border-left: 
+    var(--language-border-width) solid var(--language-border-colour) !important;
+
+  border-bottom: 
+    var(--header-separator-width) solid var(--code-styler-header-separator-colour) !important;
+
 }
 pre.code-styler-pre .code-styler-header-container {
   border-bottom: var(--header-separator-width) solid var(--code-styler-header-separator-colour);
@@ -194,6 +227,14 @@ pre.code-styler-pre .code-styler-header-container {
   background: linear-gradient(var(--code-styler-header-background-colour) 0%, var(--code-styler-header-background-colour) 100%) var(--language-border-width) bottom/100% border-box no-repeat, var(--language-border-colour) !important;
   border-bottom-left-radius: var(--border-radius);
   border-bottom-right-radius: var(--border-radius);
+
+  background:
+    var(--code-styler-codeblock-background-colour) !important;
+
+  border: 
+    var(--language-border-width) solid var(--language-border-colour) !important;
+
+  padding-bottom: 20px;
 }
 pre.code-styler-pre.code-styler-folded .code-styler-header-container {
   border-bottom: var(--folded-bottom-border);
@@ -703,13 +744,16 @@ body.code-styler span.code-styler-inline-opener > span > img.code-styler-inline-
   color: var(--code-tag);
 }
 .cm-hmd-frontmatter.cm-punctuation,
-.cm-hmd-frontmatter.cm-bracket,
 .cm-hmd-frontmatter.cm-hr {
   color: var(--code-punctuation);
 }
+
+
 .cm-hmd-frontmatter.cm-number {
   color: var(--code-value);
 }
+
+
 .cm-hmd-frontmatter.cm-qualifier,
 .cm-hmd-frontmatter.cm-string,
 .cm-hmd-frontmatter.cm-string-2 {
@@ -1396,6 +1440,67 @@ div.block-language-include pre.code-styler-pre button.copy-code-button:hover {
   font-family: var(--font-interface);
   font-size: var(--font-ui-smaller);
 }
+
+
+.cm-variable,
+.code-styler-line-text {
+  color: #9cdcfe;
+}
+
+.cm-string,
+.token.string{
+  color: #ce9178;
+}
+
+.cm-keyword,
+.token.keyword {
+  color: #c586c0;
+}
+
+.cm-keyword2 {
+  color: #569cd6;
+}
+
+
+
+.cm-def,
+.cm-function,
+.cm-property,
+.token.function {
+  color: #dcdcaa; 
+}
+
+.cm-number,
+.token.number {
+  color: #b5cea8
+}
+
+.cm-operator,
+.token.operator {
+  color: #d4d4d4
+}
+
+/* .markdown-source-view.mod-cm6 .cm-line.HyperMD-codeblock,
+.token.punctuation{
+} */
+
+.cm-class,
+.cm-builtin{
+  color: #4ec9b0
+}
+
+.cm-bracket1 {
+  color: #ffd700
+}
+
+.cm-bracket2 {
+  color: #da70d6
+}
+
+.cm-bracket3 {
+  color: #179fff
+}
+
 
 /* src/styles.css */
 /*! Complicated */

@@ -16,9 +16,156 @@ interface SettingsState {
 	processedCodeblocksWhitelist: string;
 }
 
+
+
+
+	// tests
+// Define an effect to add decorations
+const addHighlightEffect = StateEffect.define<{ from: number; to: number }>();
+const adHighlightEffectType = StateEffect.define<{ text: string }>();
+
+// Define the StateField to manage decorations
+const highlightField = StateField.define<DecorationSet>({
+    create() {
+        return Decoration.none; // Start with no decorations
+    },
+    update(decorations, transaction) {
+		console.log("Update decorations")
+        decorations = decorations.map(transaction.changes);
+		
+		
+		let doc = transaction.newDoc.toString()
+		let start = 0
+		const builder = new RangeSetBuilder<Decoration>();
+
+		let regex = RegExp("wtf", "g");
+		// Create dictionary
+		let dictionary: Record<string, string> = {
+			",": "cm-hmd-codeblock cm-operator",
+			":": "cm-hmd-codeblock cm-operator",
+			"def": "cm-hmd-codeblock cm-keyword2",
+			"True": "cm-hmd-codeblock cm-keyword2",
+			"False": "cm-hmd-codeblock cm-keyword2",
+			"lambda": "cm-hmd-codeblock cm-keyword2",
+			"print": "cm-hmd-codeblock cm-function",
+			"input": "cm-hmd-codeblock cm-function",
+			"display": "cm-hmd-codeblock cm-function",
+			"symbols": "cm-hmd-codeblock cm-function",
+			"(": "bracket+",
+			"[": "bracket+",
+			"{": "bracket+",
+			")": "bracket-",
+			"]": "bracket-",
+			"}": "bracket-",
+			"Matrix": "cm-hmd-codeblock cm-class",
+
+		};
+
+		let bracketClasses: Record<number, string> = {
+			0: "cm-hmd-codeblock cm-bracket1",
+			1: "cm-hmd-codeblock cm-bracket2",
+			2: "cm-hmd-codeblock cm-bracket3",
+		};
+
+		for (const [key] of Object.entries(dictionary)) {
+			let actual = key.replace(/[-\/\\^$.*+?()[\]{}|]/g, '\\$&'); // Escape special characters
+			if (regex.source === "wtf")
+				regex = new RegExp(actual, "g")
+			else
+				regex = new RegExp(regex.source + "|" + actual, "g")
+		}
+
+		console.log("regex", regex)
+
+		while (true){
+			let beginIndex = doc.toLowerCase().indexOf("```python")
+			console.log(beginIndex)
+			if (beginIndex === -1) {
+				break;
+			}
+			
+			doc = doc.substring(beginIndex+9)
+			start += beginIndex+9
+
+			console.log("doc", doc)
+			let currentCodeBlock = doc.split("\n```")[0]
+			console.log(currentCodeBlock)
+			
+
+			
+			let matches = currentCodeBlock.match(regex)
+			console.log(matches)
+			if (!matches) break;
+		
+			let bracketCounter = 0;
+
+			let cssClass = "";
+
+			for(let i = 0; i < matches?.length; i++){
+
+				let match = matches.at(i)
+				if (!match) break;
+				console.log("match", match, dictionary[match])
+				let from = start + currentCodeBlock.indexOf(match)
+				let to = from + match.length
+
+				if (dictionary[match] === "bracket+") {
+					cssClass = bracketClasses[bracketCounter % 3]
+					bracketCounter++
+				}
+				else if (dictionary[match] === "bracket-") {
+					bracketCounter--
+					if (bracketCounter < 0) continue;
+					cssClass = bracketClasses[bracketCounter % 3]
+				}
+				else{
+					cssClass = dictionary[match]
+				}
+
+                builder.add(
+                    from,
+                    to,
+                    Decoration.mark({ class: cssClass })
+                );
+
+				doc = doc.substring(to - start)
+				currentCodeBlock = currentCodeBlock.substring(to - start)
+				start += to - start
+			}
+		}
+
+		return builder.finish();
+    },
+    provide(field) {
+        return EditorView.decorations.from(field);
+    },
+});
+
+// Create a ViewPlugin to listen for changes and dispatch effects
+const highlightPlugin = EditorView.updateListener.of((update) => {
+    if (update.changes) {
+        update.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+            if (inserted.length > 0) {
+                update.view.dispatch({
+                    effects: addHighlightEffect.of({ from: fromB, to: toB }),
+                });
+            }
+        });
+    }
+});
+
+// Export the extension
+export const highlightExtension = [highlightField, highlightPlugin];
+
+// end tests
+
 export function createCodeblockCodeMirrorExtensions(settings: CodeStylerSettings, plugin: CodeStylerPlugin) {
 	const livePreviewCompartment = new Compartment;
 	const ignoreCompartment = new Compartment;
+
+
+
+
 
 	const interaction = ViewPlugin.fromClass(
 		class CodeStylerViewPlugin implements PluginValue {
@@ -26,6 +173,26 @@ export function createCodeblockCodeMirrorExtensions(settings: CodeStylerSettings
 				addReferenceSyntaxHighlight(window.CodeMirror);
 			}
 			update(_update: ViewUpdate) {
+				// const builder = new RangeSetBuilder<Decoration>();
+
+				// _update.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+				// 	console.log("Change detected:");
+				// 	console.log(`Original range: ${fromA} to ${toA}`);
+				// 	console.log(`New range: ${fromB} to ${toB}`);
+				// 	console.log(`Inserted text: ${inserted.toString()}`);
+				// 	console.log(inserted.toString() === ",")
+				// 	console.log(inserted.toString().length)
+				// 	if (inserted.toString() === ","){
+				// 		builder.add(
+				// 			fromB,
+				// 			toB,
+				// 			Decoration.mark({ class: "highlight-inserted" })
+				// 		);
+				// 	}					
+				// });
+
+				// return builder.finish();
+
 				//TODO (@mayurankv) Move selection back to original position - Currently done with setTimeout
 				// const previous: number = update.transactions.flatMap(t => t.effects).filter(effect => effect.is(rerender))?.[0]?.value?.pos;
 				// console.log(previous);
@@ -345,8 +512,20 @@ export function createCodeblockCodeMirrorExtensions(settings: CodeStylerSettings
 					const startLine = state.doc.lineAt(syntaxNode.from);
 					codeblockParameters = parseCodeblockParameters(trimParameterLine(startLine.text.toString()),settings.currentTheme);
 					if (!isLanguageIgnored(codeblockParameters.language,settings.excludedLanguages) && !isCodeblockIgnored(codeblockParameters.language,settings.processedCodeblocksWhitelist) && !codeblockParameters.ignore) {
-						if (!SPECIAL_LANGUAGES.some(regExp => new RegExp(regExp).test(codeblockParameters.language)))
-							builder.add(startLine.from,startLine.from,Decoration.widget({widget: new HeaderWidget(codeblockParameters,foldValue(startLine.from,codeblockParameters.fold.enabled),settings.currentTheme.settings,sourcePath,plugin), block: true, side: -1}));
+						if (!SPECIAL_LANGUAGES.some(regExp => new RegExp(regExp).test(codeblockParameters.language))){
+							if (typeof codeblockParameters.special === "undefined"){
+								builder.add(startLine.from,startLine.from,Decoration.widget({widget: new HeaderWidget(codeblockParameters,foldValue(startLine.from,codeblockParameters.fold.enabled),settings.currentTheme.settings,sourcePath,plugin), block: true, side: -1}));
+							}
+							else if (codeblockParameters.special === false){
+								builder.add(startLine.from,startLine.from,Decoration.widget({widget: new HeaderWidget(codeblockParameters,foldValue(startLine.from,codeblockParameters.fold.enabled),settings.currentTheme.settings,sourcePath,plugin), block: true, side: -1}));
+							}
+							else{
+								// let temp = codeblockParameters.title
+								codeblockParameters.title = ""
+								builder.add(startLine.from,startLine.from,Decoration.widget({widget: new HeaderWidget(codeblockParameters,foldValue(startLine.from,codeblockParameters.fold.enabled),settings.currentTheme.settings,sourcePath,plugin), block: true, side: -1}));
+								// codeblockParameters.title = temp
+							}
+						}
 					}
 				}
 			}
@@ -361,6 +540,7 @@ export function createCodeblockCodeMirrorExtensions(settings: CodeStylerSettings
 			const foldStart = state.doc.lineAt(iter.from);
 			const startDelimiter = testOpeningLine(foldStart.text.toString());
 			const codeblockParameters = iter.value.spec.widget.codeblockParameters;
+			codeblockParameters.lineNumbers.alwaysEnabled = true
 			const showLineNumbers = (settings.currentTheme.settings.codeblock.lineNumbers && !codeblockParameters.lineNumbers.alwaysDisabled) || codeblockParameters.lineNumbers.alwaysEnabled;
 			let foldEnd: Line | null = null;
 			let maxLineNum: number = 0;
@@ -393,7 +573,9 @@ export function createCodeblockCodeMirrorExtensions(settings: CodeStylerSettings
 					builder.add(foldEnd.from,foldEnd.from,Decoration.widget({widget: new LineNumberWidget(0,codeblockParameters,maxLineNum,true)}));
 			}
 		}
-		return builder.finish();
+		let test = builder.finish()
+
+		return test;
 	}
 	function convertCommentLinks(state: EditorState, line: Line, sourcePath: string, builder: RangeSetBuilder<Decoration>, sourceMode: boolean) {
 		syntaxTree(state).iterate({
