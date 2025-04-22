@@ -10,6 +10,7 @@ import { InlineCodeParameters, parseInlineCode } from "./Parsing/InlineCodeParsi
 import { createHeader, createInlineOpener, getLanguageIcon, getLineClass, isHeaderHidden } from "./CodeblockDecorating";
 import CodeStylerPlugin from "./main";
 import { addReferenceSyntaxHighlight } from "./SyntaxHighlighting";
+import { cpSync } from "fs";
 
 interface SettingsState {
 	excludedLanguages: string;
@@ -17,12 +18,9 @@ interface SettingsState {
 }
 
 
-
-
 	// tests
 // Define an effect to add decorations
 const addHighlightEffect = StateEffect.define<{ from: number; to: number }>();
-const adHighlightEffectType = StateEffect.define<{ text: string }>();
 
 // Define the StateField to manage decorations
 const highlightField = StateField.define<DecorationSet>({
@@ -30,7 +28,6 @@ const highlightField = StateField.define<DecorationSet>({
         return Decoration.none; // Start with no decorations
     },
     update(decorations, transaction) {
-		console.log("Update decorations")
         decorations = decorations.map(transaction.changes);
 		
 		
@@ -42,6 +39,7 @@ const highlightField = StateField.define<DecorationSet>({
 		// Create dictionary
 		let dictionary: Record<string, string> = {
 			",": "cm-hmd-codeblock cm-operator",
+			".": "cm-hmd-codeblock cm-operator",
 			":": "cm-hmd-codeblock cm-operator",
 			"def": "cm-hmd-codeblock cm-keyword2",
 			"True": "cm-hmd-codeblock cm-keyword2",
@@ -58,8 +56,60 @@ const highlightField = StateField.define<DecorationSet>({
 			"]": "bracket-",
 			"}": "bracket-",
 			"Matrix": "cm-hmd-codeblock cm-class",
-
+			'"': 'block"',
+			"'": "block'",
 		};
+
+		const spans = document.querySelectorAll("span.cm-variable");
+		spans.forEach((span) => {
+			const spanText = span.textContent;
+			if (spanText && spanText === spanText.toUpperCase()) {
+				if (dictionary[spanText]) return;
+				dictionary[spanText] = "constant"
+			}
+		});
+
+		let allCode = doc.split(/```[pP]ython/);
+		let actualAllCode = "";
+
+
+		for (let i = 1; i < allCode.length; i++){
+			actualAllCode += allCode[i].split("```")[0]
+		}
+
+		const functionsFinder = /def\s([a-zA-Z_]\w+)\(/g;
+		let functionMatches;
+		while ((functionMatches = functionsFinder.exec(actualAllCode)) !== null) {
+			const functionName = functionMatches[1]; // Use the captured group
+			if (dictionary[functionName]) continue;
+			dictionary[functionName] = "cm-hmd-codeblock cm-function";
+		}
+
+		const classesFinder = /class\s([a-zA-Z_]\w+)\(/g;
+		let classMatches;
+		while ((classMatches = classesFinder.exec(actualAllCode)) !== null) {
+			const className = classMatches[1]; // Use the captured group
+			if (dictionary[className]) continue;
+			dictionary[className] = "cm-hmd-codeblock cm-class";
+		}
+
+		const importFinder = /from\s([a-zA-Z]+)\simport|import\s([a-zA-Z]+)\sas\s([a-zA-Z]+)|import\s([a-zA-Z]+)/g;
+		let importMatches;
+		while ((importMatches = importFinder.exec(actualAllCode)) !== null) {
+			let importName = importMatches[1]
+			if(!importName){
+				importName = importMatches[2]
+				let importAlias = importMatches[3];
+				dictionary[importAlias] = "cm-hmd-codeblock cm-class"
+			}
+			if(!importName){
+				importName = importMatches[4]
+			}
+
+			dictionary[importName] = "cm-hmd-codeblock cm-class";
+
+		}
+
 
 		let bracketClasses: Record<number, string> = {
 			0: "cm-hmd-codeblock cm-bracket1",
@@ -68,18 +118,16 @@ const highlightField = StateField.define<DecorationSet>({
 		};
 
 		for (const [key] of Object.entries(dictionary)) {
-			let actual = key.replace(/[-\/\\^$.*+?()[\]{}|]/g, '\\$&'); // Escape special characters
+			let actual = key.replace(/[-/\\^$.*+?()[\]{}|]/g, '\\$&'); // Escape special characters
 			if (regex.source === "wtf")
 				regex = new RegExp(actual, "g")
 			else
 				regex = new RegExp(regex.source + "|" + actual, "g")
 		}
 
-		console.log("regex", regex)
 
 		while (true){
 			let beginIndex = doc.toLowerCase().indexOf("```python")
-			console.log(beginIndex)
 			if (beginIndex === -1) {
 				break;
 			}
@@ -87,39 +135,63 @@ const highlightField = StateField.define<DecorationSet>({
 			doc = doc.substring(beginIndex+9)
 			start += beginIndex+9
 
-			console.log("doc", doc)
 			let currentCodeBlock = doc.split("\n```")[0]
-			console.log(currentCodeBlock)
 			
 
 			
 			let matches = currentCodeBlock.match(regex)
-			console.log(matches)
 			if (!matches) break;
-		
 			let bracketCounter = 0;
 
 			let cssClass = "";
-
-			for(let i = 0; i < matches?.length; i++){
+			let blocked = "";
+			for(let i = 0; i < matches.length; i++){
 
 				let match = matches.at(i)
 				if (!match) break;
-				console.log("match", match, dictionary[match])
 				let from = start + currentCodeBlock.indexOf(match)
 				let to = from + match.length
+				
+				const functionRegex = /^[a-zA-Z_]\w*$/
 
-				if (dictionary[match] === "bracket+") {
+				const isValid = functionRegex.test(match)
+				if (isValid){
+					const before = currentCodeBlock.charAt(from-start-1)
+					const after = currentCodeBlock.charAt(to-start)
+					if (functionRegex.test(before) || functionRegex.test(after)){
+						continue;
+					}
+				}
+
+
+				const dMatch = dictionary[match]
+
+				if (blocked && match !== blocked) {
+					continue;
+				}
+				else if (blocked && match === blocked) {
+					cssClass = "cm-hmd-codeblock cm-string"
+					blocked = "";
+				}
+				else if (dMatch === "bracket+") {
 					cssClass = bracketClasses[bracketCounter % 3]
 					bracketCounter++
 				}
-				else if (dictionary[match] === "bracket-") {
+				else if (dMatch === "bracket-") {
 					bracketCounter--
 					if (bracketCounter < 0) continue;
 					cssClass = bracketClasses[bracketCounter % 3]
 				}
+				else if (dMatch === 'block"') {
+					cssClass = "cm-hmd-codeblock cm-string"
+					blocked = '"';
+				}
+				else if (dMatch === "block'") {
+					cssClass = "cm-hmd-codeblock cm-string"
+					blocked = "'";
+				}
 				else{
-					cssClass = dictionary[match]
+					cssClass = dMatch
 				}
 
                 builder.add(
@@ -133,7 +205,6 @@ const highlightField = StateField.define<DecorationSet>({
 				start += to - start
 			}
 		}
-
 		return builder.finish();
     },
     provide(field) {
@@ -173,26 +244,6 @@ export function createCodeblockCodeMirrorExtensions(settings: CodeStylerSettings
 				addReferenceSyntaxHighlight(window.CodeMirror);
 			}
 			update(_update: ViewUpdate) {
-				// const builder = new RangeSetBuilder<Decoration>();
-
-				// _update.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-				// 	console.log("Change detected:");
-				// 	console.log(`Original range: ${fromA} to ${toA}`);
-				// 	console.log(`New range: ${fromB} to ${toB}`);
-				// 	console.log(`Inserted text: ${inserted.toString()}`);
-				// 	console.log(inserted.toString() === ",")
-				// 	console.log(inserted.toString().length)
-				// 	if (inserted.toString() === ","){
-				// 		builder.add(
-				// 			fromB,
-				// 			toB,
-				// 			Decoration.mark({ class: "highlight-inserted" })
-				// 		);
-				// 	}					
-				// });
-
-				// return builder.finish();
-
 				//TODO (@mayurankv) Move selection back to original position - Currently done with setTimeout
 				// const previous: number = update.transactions.flatMap(t => t.effects).filter(effect => effect.is(rerender))?.[0]?.value?.pos;
 				// console.log(previous);
@@ -513,18 +564,7 @@ export function createCodeblockCodeMirrorExtensions(settings: CodeStylerSettings
 					codeblockParameters = parseCodeblockParameters(trimParameterLine(startLine.text.toString()),settings.currentTheme);
 					if (!isLanguageIgnored(codeblockParameters.language,settings.excludedLanguages) && !isCodeblockIgnored(codeblockParameters.language,settings.processedCodeblocksWhitelist) && !codeblockParameters.ignore) {
 						if (!SPECIAL_LANGUAGES.some(regExp => new RegExp(regExp).test(codeblockParameters.language))){
-							if (typeof codeblockParameters.special === "undefined"){
-								builder.add(startLine.from,startLine.from,Decoration.widget({widget: new HeaderWidget(codeblockParameters,foldValue(startLine.from,codeblockParameters.fold.enabled),settings.currentTheme.settings,sourcePath,plugin), block: true, side: -1}));
-							}
-							else if (codeblockParameters.special === false){
-								builder.add(startLine.from,startLine.from,Decoration.widget({widget: new HeaderWidget(codeblockParameters,foldValue(startLine.from,codeblockParameters.fold.enabled),settings.currentTheme.settings,sourcePath,plugin), block: true, side: -1}));
-							}
-							else{
-								// let temp = codeblockParameters.title
-								codeblockParameters.title = ""
-								builder.add(startLine.from,startLine.from,Decoration.widget({widget: new HeaderWidget(codeblockParameters,foldValue(startLine.from,codeblockParameters.fold.enabled),settings.currentTheme.settings,sourcePath,plugin), block: true, side: -1}));
-								// codeblockParameters.title = temp
-							}
+							builder.add(startLine.from,startLine.from,Decoration.widget({widget: new HeaderWidget(codeblockParameters,foldValue(startLine.from,codeblockParameters.fold.enabled),settings.currentTheme.settings,sourcePath,plugin), block: true, side: -1}));
 						}
 					}
 				}

@@ -132,6 +132,7 @@ export function parseCodeblockParameters(parameterLine: string, theme: CodeStyle
 		ignore: false,
 		special: false,
 	};
+
 	if (parameterLine.startsWith("```"))
 		parameterLine = parameterLine.replace(/^```+(?=[^`]|$)/,"");
 	else if (parameterLine.startsWith("~~~"))
@@ -418,6 +419,14 @@ function getParameterLine(codeblockLines: Array<string>): string | undefined {
 		openingCodeblockLine = cleanParameterLine(openingCodeblockLine);
 	return openingCodeblockLine;
 }
+
+function getCodeText(codeblockLines: Array<string>): string | undefined {
+	codeblockLines = codeblockLines.slice(1,-1);
+	if (codeblockLines.length === 0)
+		return undefined;
+	return codeblockLines.join("\n");
+}
+
 function getOpeningLine(codeblockLines: Array<string>): string | undefined {
 	return codeblockLines.find((line: string)=>Boolean(testOpeningLine(line)));
 }

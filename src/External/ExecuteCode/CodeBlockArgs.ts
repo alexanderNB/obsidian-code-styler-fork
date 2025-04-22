@@ -48,7 +48,7 @@ export function getArgs(firstLineOfCode: string): CodeBlockArgs {
 		args = `{export: ['${exports.join("', '")}'], ${args}`;
 		return JSON5.parse(args);
 	} catch (err) {
-		new Notice(`Failed to parse code block arguments from line:\n${firstLineOfCode}\n\nFailed with error:\n${err}`);
+		// new Notice(`Failed to parse code block arguments from line:\n${firstLineOfCode}\n\nFailed with error:\n${err}`);
 		return {};
 	}
 }

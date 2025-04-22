@@ -13,7 +13,6 @@ interface IdCache {
 type ReferenceByFile = Record<string,Array<string>>
 
 export async function referenceCodeblockProcessor(source: string, codeblockElement: HTMLElement, context: MarkdownPostProcessorContext, plugin: CodeStylerPlugin) {
-	console.log("1")
 	const codeblockSectionInfo: MarkdownSectionInformation | null = context.getSectionInfo(codeblockElement);
 	if (codeblockSectionInfo === null)
 		throw Error("Could not retrieve codeblock information");

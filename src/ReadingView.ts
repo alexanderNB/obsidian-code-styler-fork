@@ -1,4 +1,4 @@
-import { MarkdownSectionInformation, CachedMetadata, sanitizeHTMLToDom, FrontMatterCache, MarkdownRenderer } from "obsidian";
+import { MarkdownSectionInformation, CachedMetadata, sanitizeHTMLToDom, FrontMatterCache, MarkdownRenderer, App } from "obsidian";
 import { visitParents } from "unist-util-visit-parents";
 import { fromHtml } from "hast-util-from-html";
 import { toHtml } from "hast-util-to-html";
@@ -9,6 +9,148 @@ import { SETTINGS_SOURCEPATH_PREFIX, TRANSITION_LENGTH } from "./Settings";
 import { CodeblockParameters, getFileContentLines, isCodeblockIgnored, isLanguageIgnored, parseCodeblockSource } from "./Parsing/CodeblockParsing";
 import { InlineCodeParameters, parseInlineCode } from "./Parsing/InlineCodeParsing";
 import { createHeader, createInlineOpener, getLineClass as getLineClasses } from "./CodeblockDecorating";
+import { EditorView, DecorationSet, Decoration } from "@codemirror/view";
+import { StateField, RangeSetBuilder } from "@codemirror/state";
+import { PassThrough } from "stream";
+
+
+
+// export async function addCssClasses() : Promise<DecorationSet> {
+	
+// 	let file = this.app.workspace.getActiveFile();
+// 	if (!file) return;
+// 	let doc = await this.app.vault.read(file);
+
+
+// 	let start = 0
+// 	const builder = new RangeSetBuilder<Decoration>();
+
+// 	let regex = RegExp("wtf", "g");
+// 	// Create dictionary
+// 	let dictionary: Record<string, string> = {
+// 		",": "cm-hmd-codeblock cm-operator",
+// 		":": "cm-hmd-codeblock cm-operator",
+// 		"def": "cm-hmd-codeblock cm-keyword2",
+// 		"True": "cm-hmd-codeblock cm-keyword2",
+// 		"False": "cm-hmd-codeblock cm-keyword2",
+// 		"lambda": "cm-hmd-codeblock cm-keyword2",
+// 		"print": "cm-hmd-codeblock cm-function",
+// 		"input": "cm-hmd-codeblock cm-function",
+// 		"display": "cm-hmd-codeblock cm-function",
+// 		"symbols": "cm-hmd-codeblock cm-function",
+// 		"(": "bracket+",
+// 		"[": "bracket+",
+// 		"{": "bracket+",
+// 		")": "bracket-",
+// 		"]": "bracket-",
+// 		"}": "bracket-",
+// 		"Matrix": "cm-hmd-codeblock cm-class",
+// 	};
+
+// 	let allCode = doc.split(/```(p|P)ython/);
+// 	let actualAllCode = "";
+
+
+// 	for (let i = 1; i < allCode.length; i++){
+// 		actualAllCode += allCode[i].split("```")[0]
+// 	}
+
+// 	const functionsFinder = /def .*\(/g
+// 	let functionMatches = actualAllCode.match(functionsFinder)
+// 	if (functionMatches){
+// 		for (let i = 0; i < functionMatches.length; i++){
+// 			let functionMatch = functionMatches.at(i)
+// 			if (!functionMatch) continue;
+// 			functionMatch = functionMatch.substring(4)
+// 			functionMatch = functionMatch.substring(0, functionMatch.length-1)
+// 			if (dictionary[functionMatch]) continue;
+// 			dictionary[functionMatch] = "cm-hmd-codeblock cm-function"
+// 		}
+// 	}
+
+// 	let bracketClasses: Record<number, string> = {
+// 		0: "cm-hmd-codeblock cm-bracket1",
+// 		1: "cm-hmd-codeblock cm-bracket2",
+// 		2: "cm-hmd-codeblock cm-bracket3",
+// 	};
+
+// 	for (const [key] of Object.entries(dictionary)) {
+// 		let actual = key.replace(/[-\/\\^$.*+?()[\]{}|]/g, '\\$&'); // Escape special characters
+// 		if (regex.source === "wtf")
+// 			regex = new RegExp(actual, "g")
+// 		else
+// 			regex = new RegExp(regex.source + "|" + actual, "g")
+// 	}
+
+
+// 	while (true){
+// 		let beginIndex = doc.toLowerCase().indexOf("```python")
+// 		if (beginIndex === -1) {
+// 			break;
+// 		}
+		
+// 		doc = doc.substring(beginIndex+9)
+// 		start += beginIndex+9
+
+// 		let currentCodeBlock = doc.split("\n```")[0]
+		
+
+		
+// 		let matches = currentCodeBlock.match(regex)
+// 		if (!matches) break;
+	
+// 		let bracketCounter = 0;
+
+// 		let cssClass = "";
+
+// 		for(let i = 0; i < matches.length; i++){
+
+// 			let match = matches.at(i)
+// 			if (!match) break;
+// 			let from = start + currentCodeBlock.indexOf(match)
+// 			let to = from + match.length
+			
+// 			const functionRegex = /^[a-zA-Z0-9_]+$/
+
+// 			const isValid = functionRegex.test(match)
+// 			if (isValid){
+// 				const before = currentCodeBlock.charAt(from-start-1)
+// 				const after = currentCodeBlock.charAt(to-start)
+// 				if (functionRegex.test(before) || functionRegex.test(after)){
+// 					continue;
+// 				}
+// 			}
+
+
+
+// 			if (dictionary[match] === "bracket+") {
+// 				cssClass = bracketClasses[bracketCounter % 3]
+// 				bracketCounter++
+// 			}
+// 			else if (dictionary[match] === "bracket-") {
+// 				bracketCounter--
+// 				if (bracketCounter < 0) continue;
+// 				cssClass = bracketClasses[bracketCounter % 3]
+// 			}
+// 			else{
+// 				cssClass = dictionary[match]
+// 			}
+
+// 			builder.add(
+// 				from,
+// 				to,
+// 				Decoration.mark({ class: cssClass })
+// 			);
+
+// 			doc = doc.substring(to - start)
+// 			currentCodeBlock = currentCodeBlock.substring(to - start)
+// 			start += to - start
+// 		}
+// 	}
+// 	return builder.finish();
+// }
+
+
 
 export async function readingViewCodeblockDecoratingPostProcessor(element: HTMLElement, {sourcePath,getSectionInfo,frontmatter}: {sourcePath: string, getSectionInfo: (element: HTMLElement) => MarkdownSectionInformation | null, frontmatter: FrontMatterCache | undefined}, plugin: CodeStylerPlugin, editingEmbeds = false) {
 	const cache: CachedMetadata | null = plugin.app.metadataCache.getCache(sourcePath);
@@ -25,7 +167,10 @@ export async function readingViewCodeblockDecoratingPostProcessor(element: HTMLE
 	if (codeblockPreElements.length === 0 && !(editingEmbeds && specific))
 		return;
 
+	
 	const codeblockSectionInfo: MarkdownSectionInformation | null = getSectionInfo(codeblockPreElements[0]);
+
+
 	if (codeblockSectionInfo && specific && !editingEmbeds)
 		await renderSpecificReadingSection(codeblockPreElements,sourcePath,codeblockSectionInfo,plugin);
 	else if (specific && sourcePath.startsWith(SETTINGS_SOURCEPATH_PREFIX))
@@ -93,7 +238,7 @@ async function renderSettings(codeblockPreElements: Array<HTMLElement>, sourcePa
 	await remakeCodeblocks(codeblockPreElements,codeblocksParameters,sourcePath,true,false,plugin);
 }
 async function renderDocument(codeblockPreElements: Array<HTMLElement>, sourcePath: string, cache: CachedMetadata | null, editingEmbeds: boolean, printing: boolean, plugin: CodeStylerPlugin) {
-	const codeblocksParameters: Array<CodeblockParameters> = await getCodeblocksParameters(sourcePath,cache,plugin,editingEmbeds);
+	const codeblocksParameters: Array<CodeblockParameters> = await getCodeblocksParameters(sourcePath,cache,plugin,editingEmbeds,codeblockPreElements);
 	await remakeCodeblocks(codeblockPreElements,codeblocksParameters,sourcePath,!printing,true,plugin);
 }
 async function retriggerProcessor(element: HTMLElement, context: {sourcePath: string, getSectionInfo: (element: HTMLElement) => MarkdownSectionInformation | null, frontmatter: FrontMatterCache | undefined}, plugin: CodeStylerPlugin, editingEmbeds: boolean) {
@@ -109,7 +254,7 @@ async function retriggerProcessor(element: HTMLElement, context: {sourcePath: st
 }
 
 async function remakeCodeblocks(codeblockPreElements: Array<HTMLElement>, codeblocksParameters: Array<CodeblockParameters>, sourcePath: string, dynamic: boolean, skipStyled: boolean, plugin: CodeStylerPlugin) {
-	if (codeblockPreElements.length !== codeblocksParameters.length || false)
+	if (codeblockPreElements.length !== codeblocksParameters.length)
 		return;
 	for (const [key,codeblockPreElement] of Array.from(codeblockPreElements).entries()) {
 		const codeblockParameters = codeblocksParameters[key];
@@ -127,12 +272,137 @@ async function remakeCodeblocks(codeblockPreElements: Array<HTMLElement>, codebl
 	}
 }
 
+
+
+
+
 async function remakeCodeblock(codeblockCodeElement: HTMLElement, codeblockPreElement: HTMLElement, codeblockParameters: CodeblockParameters, sourcePath: string, dynamic: boolean, plugin: CodeStylerPlugin) {
 	if (dynamic)
 		plugin.executeCodeMutationObserver.observe(codeblockPreElement,{childList: true,subtree: true,attributes: true,characterData: true}); // Add Execute Code Observer
 
-	insertHeader(codeblockPreElement,codeblockParameters,sourcePath,plugin,dynamic);
+	let dictionary: Record<string, string> = {
+		",": "cm-hmd-codeblock cm-operator",
+		".": "cm-hmd-codeblock cm-operator",
+		":": "cm-hmd-codeblock cm-operator",
+		"def": "cm-hmd-codeblock cm-keyword2",
+		"True": "cm-hmd-codeblock cm-keyword2",
+		"False": "cm-hmd-codeblock cm-keyword2",
+		"lambda": "cm-hmd-codeblock cm-keyword2",
+		"print": "cm-hmd-codeblock cm-function",
+		"input": "cm-hmd-codeblock cm-function",
+		"display": "cm-hmd-codeblock cm-function",
+		"symbols": "cm-hmd-codeblock cm-function",
+		"(": "bracket+",
+		"[": "bracket+",
+		"{": "bracket+",
+		")": "bracket-",
+		"]": "bracket-",
+		"}": "bracket-",
+		"Matrix": "cm-hmd-codeblock cm-class",
+	};
 
+
+	let bracketClasses: Record<number, string> = {
+		0: "cm-hmd-codeblock cm-bracket1",
+		1: "cm-hmd-codeblock cm-bracket2",
+		2: "cm-hmd-codeblock cm-bracket3",
+	};
+
+	let bracketCounter = 0
+	Array.from(codeblockCodeElement.childNodes).forEach((node: ChildNode) => {
+		if (node.nodeType === Node.TEXT_NODE) {
+			// console.log("Text node", node)
+			// Handle text nodes
+			const textContent = node.textContent;
+			if (!textContent?.trim()) return; // Skip empty text nodes
+			const textContentLines = textContent.split("\n");
+			
+			const span = document.createElement("span");
+
+			let firstLine = true;
+			textContentLines.forEach(element => {
+				if (!firstLine){
+					element = "\n" + element;
+				}
+				else{
+					firstLine = false
+				}
+				
+				const textContentLineWords = element.split(" ")
+				let firstWord = true;
+
+				textContentLineWords.forEach(element => {
+					if (!firstWord){
+						element = " " + element;
+					}
+					else{
+						firstWord = false
+					}
+
+
+
+					const spanPart = document.createElement("span");
+					spanPart.textContent = element;
+					let cssClass = dictionary[element.trim()]
+					if (cssClass){
+						spanPart.classList = cssClass;
+					}
+					else if (element === element.toUpperCase()){
+						spanPart.classList = "cm-hmd-codeblock constant"
+					}
+					else{
+						spanPart.classList = "cm-hmd-codeblock cm-variable"
+					}
+					
+					
+					span.appendChild(spanPart);
+				});
+
+				
+
+
+			});
+			node.replaceWith(span);
+		} else if (node.nodeType === Node.ELEMENT_NODE) {
+			
+			// Handle element nodes
+
+			
+			const element = node as HTMLElement;
+			// console.log("Element node", node, element.nextElementSibling, element.classList, element.innerHTML)
+			if(element.classList.contains("keyword")){
+				if (element.innerHTML === "def"){
+					const nextElement = element.nextElementSibling;
+					if (nextElement?.classList.contains("function")){
+						dictionary[nextElement.innerHTML] = "cm-hmd-codeblock cm-function"
+					}
+				}
+			}
+			else if(element.classList.contains("class-name")){
+				dictionary[element.innerHTML] = "cm-hmd-codeblock cm-class"
+			}
+			
+
+
+			let cssClass = dictionary[element.innerHTML];
+			if (!cssClass) return;
+	
+			if (cssClass === "bracket+") {
+				cssClass = bracketClasses[bracketCounter % 3];
+				bracketCounter++;
+			} else if (cssClass === "bracket-") {
+				bracketCounter--;
+				if (bracketCounter < 0) return;
+				cssClass = bracketClasses[bracketCounter % 3];
+			}
+			element.classList = cssClass;
+		}
+	});
+
+
+
+	
+	insertHeader(codeblockPreElement,codeblockParameters,sourcePath,plugin,dynamic);
 	codeblockPreElement.classList.add(...getPreClasses(codeblockParameters,dynamic));
 	codeblockPreElement.setAttribute("defaultFold",codeblockParameters.fold.enabled.toString());
 	if (codeblockPreElement.parentElement)
@@ -162,10 +432,23 @@ async function remakeInlineCode(inlineCodeElement: HTMLElement, plugin: CodeStyl
 
 async function getCodeblockPreElements(element: HTMLElement, specific: boolean,editingEmbeds: boolean): Promise<Array<HTMLElement>> {
 	let codeblockPreElements: Array<HTMLElement>;
+
 	if (!editingEmbeds && !specific)
 		codeblockPreElements = Array.from(element.querySelectorAll(".markdown-reading-view pre:not(.frontmatter)"));
-	else if (editingEmbeds && !specific)
+	else if (editingEmbeds && !specific){
+		// codeblockPreElements = Array.from(element.querySelectorAll(".markdown-reading-view pre:not(.frontmatter)"));
 		codeblockPreElements = Array.from(element.querySelectorAll(".markdown-source-view .cm-embed-block pre:not(.frontmatter)"));
+		let codeblockTitleGetters: HTMLElement[] = Array.from(element.querySelectorAll(".markdown-reading-view pre:not(.frontmatter)"));
+		for (let i = 0; i < codeblockTitleGetters.length; i++){
+			let codeblockTitleGetter = codeblockTitleGetters.at(i)?.firstChild?.firstChild;
+			let codeblockPreElement = codeblockPreElements.at(i)
+			if (!codeblockTitleGetter || !codeblockPreElement) continue;
+			let title = codeblockTitleGetter.textContent;
+			if (!title) continue;
+			codeblockPreElement.title = title;
+		}
+	}
+
 	else if (!editingEmbeds && specific) {
 		codeblockPreElements = Array.from(element.querySelectorAll("pre:not(.frontmatter)"));
 		const admonitionCodeElement = codeblockPreElements?.[0]?.querySelector("pre:not([class]) > code[class*=\"language-ad-\"]");
@@ -174,41 +457,85 @@ async function getCodeblockPreElements(element: HTMLElement, specific: boolean,e
 			codeblockPreElements = Array.from(element.querySelectorAll("pre:not(.frontmatter)"));
 		}
 	} else
+		// codeblockPreElements = Array.from(element.querySelectorAll("pre:not(.frontmatter)"));
 		codeblockPreElements = [];
 	return codeblockPreElements;
 }
-async function getCodeblocksParameters(sourcePath: string, cache: CachedMetadata | null, plugin: CodeStylerPlugin, editingEmbeds: boolean): Promise<Array<CodeblockParameters>> {
+
+
+async function getCodeblocksParameters(sourcePath: string, cache: CachedMetadata | null, plugin: CodeStylerPlugin, editingEmbeds: boolean, codeblockPreElements : HTMLElement[]): Promise<Array<CodeblockParameters>> {
 	let codeblocksParameters: Array<CodeblockParameters> = [];
 	let tempCodedBlockParameters: Array<CodeblockParameters> = [];
+	let fakecodeblocksParameters: Array<CodeblockParameters> = [];
+	let faketempCodedBlockParameters: Array<CodeblockParameters> = [];
 	const fileContentLines = await getFileContentLines(sourcePath,plugin);
+	// console.log(fileContentLines)
+
+	for (const codeblock of codeblockPreElements){
+		let codeblockLines = codeblock.innerText.split("\n")
+
+		let header = "```Python"
+		if (codeblock.title){
+			header += " title:" + codeblock.title
+		}
+		codeblockLines.unshift(header)
+		
+		
+		codeblockLines.push("```")
+		const parsedCodeblocksParameters = await parseCodeblockSource(codeblockLines,plugin,sourcePath);
+		if (parsedCodeblocksParameters.codeblocksParameters.length === 1){
+			let potentialSigularCBParameters = parsedCodeblocksParameters.codeblocksParameters.at(0)
+			if (typeof potentialSigularCBParameters !== "undefined"){
+				if (potentialSigularCBParameters.special){
+					tempCodedBlockParameters.push(potentialSigularCBParameters)
+				}
+			}
+			continue;
+		}
+
+		if (tempCodedBlockParameters.length !== 0){
+			console.warn("Temp thing not 0 yes it's me who made this idk")
+			continue;
+		}
+
+		if (!editingEmbeds || parsedCodeblocksParameters.nested){
+			codeblocksParameters = codeblocksParameters.concat(parsedCodeblocksParameters.codeblocksParameters);
+		}
+	}
+
+
+
 	if (typeof cache?.sections !== "undefined") {
 		for (const section of cache.sections) {
 			if (!editingEmbeds || section.type === "code" || section.type === "callout") {
-				const parsedCodeblocksParameters = await parseCodeblockSource(fileContentLines.slice(section.position.start.line,section.position.end.line+1),plugin,sourcePath);
+				// const parsedCodeblocksParameters = await parseCodeblockSource(fileContentLines.slice(section.position.start.line,section.position.end.line+1),plugin,sourcePath);
 
-				if (parsedCodeblocksParameters.codeblocksParameters.length === 1){
-					let potentialSigularCBParameters = parsedCodeblocksParameters.codeblocksParameters.at(0)
-					if (typeof potentialSigularCBParameters !== "undefined"){
-						if (potentialSigularCBParameters.special){
-							tempCodedBlockParameters.push(potentialSigularCBParameters)
-						}
-					}
-					continue;
-				}
+				// if (parsedCodeblocksParameters.codeblocksParameters.length === 1){
+				// 	let potentialSigularCBParameters = parsedCodeblocksParameters.codeblocksParameters.at(0)
+				// 	if (typeof potentialSigularCBParameters !== "undefined"){
+				// 		if (potentialSigularCBParameters.special){
+				// 			faketempCodedBlockParameters.push(potentialSigularCBParameters)
+				// 		}
+				// 	}
+				// 	continue;
+				// }
 
-				if (tempCodedBlockParameters.length !== 0){
-					console.warn("Temp thing not 0")
-					continue;
-				}
+				// if (faketempCodedBlockParameters.length !== 0){
+				// 	console.warn("Temp thing not 0 yes it's me who made this idk")
+				// 	continue;
+				// }
 
-				if (!editingEmbeds || parsedCodeblocksParameters.nested){
-					codeblocksParameters = codeblocksParameters.concat(parsedCodeblocksParameters.codeblocksParameters);
-				}
+				// if (!editingEmbeds || parsedCodeblocksParameters.nested){
+
+				// 	fakecodeblocksParameters = fakecodeblocksParameters.concat(parsedCodeblocksParameters.codeblocksParameters);
+				// }
 					
 			}
 		}
 	} else
 		console.error(`Metadata cache not found for file: ${sourcePath}`);
+
+
 
 	if (tempCodedBlockParameters.length !== 0){
 		codeblocksParameters = tempCodedBlockParameters;
@@ -216,6 +543,7 @@ async function getCodeblocksParameters(sourcePath: string, cache: CachedMetadata
 	return codeblocksParameters;
 }
 function insertHeader(codeblockPreElement: HTMLElement, codeblockParameters: CodeblockParameters, sourcePath: string, plugin: CodeStylerPlugin, dynamic: boolean): void {
+	console.log("Read header", codeblockPreElement, codeblockParameters)
 	const headerContainer = createHeader(codeblockParameters, plugin.settings.currentTheme.settings, sourcePath, plugin);
 	if (dynamic)
 		headerContainer.addEventListener("click",()=>{toggleFold(codeblockPreElement);}); // Add listener for header folding on click
@@ -329,6 +657,8 @@ function convertCommentLinks(result: Array<ElementContent>, commentText: string,
 function insertLineWrapper(codeblockCodeElement: HTMLElement, codeblockParameters: CodeblockParameters, lineNumber: number, line: string, showLineNumbers: boolean): void {
 	const lineWrapper = document.createElement("div");
 	codeblockCodeElement.appendChild(lineWrapper);
+	
+
 	getLineClasses(codeblockParameters,lineNumber,line).forEach((lineClass) => lineWrapper.classList.add(lineClass));
 	if ((showLineNumbers && !codeblockParameters.lineNumbers.alwaysDisabled) || codeblockParameters.lineNumbers.alwaysEnabled)
 		lineWrapper.appendChild(createDiv({cls: "code-styler-line-number", text: (lineNumber+codeblockParameters.lineNumbers.offset).toString()}));
@@ -353,12 +683,66 @@ async function getHighlightedHTML(parameters: InlineCodeParameters, text: string
 	return renderedCodeElement.innerHTML;
 }
 
+let counter = 0;
+
 export const executeCodeMutationObserver = new MutationObserver((mutations) => {
 	mutations.forEach((mutation: MutationRecord) => {
+		// console.log("Mutation detected",mutation, (mutation.target as HTMLElement), (mutation.target as HTMLElement).tagName);
+
+
 		if (mutation.type === "childList" && (mutation.target as HTMLElement).tagName === "PRE") { // Add execute code output
 			const executeCodeOutput = (mutation.target as HTMLElement).querySelector("pre > code ~ code.language-output") as HTMLElement;
-			if (executeCodeOutput)
+			if (executeCodeOutput){
+				// console.log("Execute code output detected",executeCodeOutput);
 				executeCodeOutput.classList.add("execute-code-output");
+
+			}
+		}
+		if (mutation.type === "childList" && (mutation.target as HTMLElement).tagName === "SPAN") { // Add execute code output
+			const htmlElement = mutation.target as HTMLElement;
+			// console.log("Mutation detected 2",htmlElement, htmlElement.tagName, htmlElement.classList, htmlElement.querySelector("span > span"));
+			if (htmlElement.classList.contains("stderr") && !htmlElement.querySelector("span > span")){
+				const text = htmlElement.innerText;
+				const target = "'d'";
+				counter += 1;
+				if (counter > 10) return; // Prevent infinite loop
+				console.log(counter)
+				if (text.includes(target)) {
+					// Split the text into parts
+					const before = text.split(target)[0];
+					const after = text.split(target)[1];
+			
+					// Clear the original content
+					htmlElement.innerHTML = "";
+			
+					// Add the parts with the target wrapped in a new span
+					if (before) htmlElement.appendChild(document.createTextNode(before));
+					const targetSpan = document.createElement("span");
+					targetSpan.classList.add("errorCodeOutput-code-output"); // Add your desired class
+					targetSpan.innerText = target;
+					htmlElement.appendChild(targetSpan);
+					if (after) htmlElement.appendChild(document.createTextNode(after));
+				}
+			}
+
+			// const errorCodeOutput = (mutation.target as HTMLElement).querySelector("span.stderr") as HTMLElement;
+			// console.log("Error code output",errorCodeOutput);
+			// if (errorCodeOutput){
+			// 	console.log("Error code output detected",errorCodeOutput);
+			// 	errorCodeOutput.classList.add("errorCodeOutput-code-output");
+
+			// }
 		}
 	});
+
+	// const errorSpans = document.querySelectorAll("span");
+	// errorSpans.forEach((span) => {
+	// 	if (span.classList.contains("stderr")) {
+	// 		console.log("Error span found:", span.innerText);
+	// 		// Add a new class or modify it
+	// 		span.classList.add("highlight-error");
+	// 	}
+	// });
+
+
 });
