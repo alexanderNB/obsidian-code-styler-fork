@@ -11,7 +11,7 @@
 	color: var(--code-tag);
 }
 .cm-hmd-frontmatter.cm-punctuation,
-.cm-hmd-frontmatter.cm-bracket,
+/* .cm-hmd-frontmatter.cm-bracket,  Im not sure about this change */
 .cm-hmd-frontmatter.cm-hr {
 	color: var(--code-punctuation);
 }

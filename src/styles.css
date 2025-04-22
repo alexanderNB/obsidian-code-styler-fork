@@ -6,3 +6,75 @@
 @import url("./css/pickr.css");
 @import url("./css/settings.css");
 @import url("./css/pluginCompatibility.css");
+
+/* Changes to be settingified */
+
+
+.cm-hmd-codeblock.cm-variable,
+.cm-hmd-codeblock.cm-variable-2,
+.cm-hmd-codeblock.code-styler-line-text {
+  color: #9cdcfe;
+}
+
+.cm-hmd-codeblock.cm-string,
+.token.string{
+  color: #ce9178;
+}
+
+.cm-hmd-codeblock.cm-keyword,
+.token.keyword {
+  color: #c586c0;
+}
+
+.cm-hmd-codeblock.cm-keyword2 {
+  color: #569cd6;
+}
+
+
+
+.cm-hmd-codeblock.cm-def,
+.cm-hmd-codeblock.cm-function,
+.cm-hmd-codeblock.cm-property,
+.token.function {
+  color: #dcdcaa; 
+}
+
+.cm-hmd-codeblock.cm-number,
+.token.number {
+  color: #b5cea8
+}
+
+.cm-hmd-codeblock.cm-operator,
+.token.operator {
+  color: #d4d4d4
+}
+
+/* .markdown-source-view.mod-cm6 .cm-line.HyperMD-codeblock,
+.token.punctuation{
+} */
+
+.cm-hmd-codeblock.cm-class,
+.token.builtin,
+.cm-builtin{
+  color: #4ec9b0
+}
+
+.cm-hmd-codeblock.cm-bracket1 {
+  color: #ffd700
+}
+
+.cm-hmd-codeblock.cm-bracket2 {
+  color: #da70d6
+}
+
+.cm-hmd-codeblock.cm-bracket3 {
+  color: #179fff
+}
+
+.constant {
+  color: #4fc1ff
+}
+
+.stdout {
+  color: #cccccc;
+}
