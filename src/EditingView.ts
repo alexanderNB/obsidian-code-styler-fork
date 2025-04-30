@@ -49,6 +49,7 @@ const highlightField = StateField.define<DecorationSet>({
 			"input": "cm-hmd-codeblock cm-function",
 			"display": "cm-hmd-codeblock cm-function",
 			"symbols": "cm-hmd-codeblock cm-function",
+			"None": "cm-hmd-codeblock cm-keyword2",
 			"(": "bracket+",
 			"[": "bracket+",
 			"{": "bracket+",

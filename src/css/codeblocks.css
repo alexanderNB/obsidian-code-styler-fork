@@ -139,15 +139,43 @@ body.code-styler .markdown-source-view :not(pre.code-styler-pre) > .code-styler-
 body.code-styler .markdown-source-view :not(pre.code-styler-pre) > .code-styler-header-container-hidden + [class*="code-styler-line"].HyperMD-codeblock-begin .code-styler-line-number {
 	border-top-left-radius: var(--border-radius) !important;
 }
+
+.HyperMD-codeblock-begin{
+	color: #cccccc !important;
+}
+  
+.HyperMD-codeblock-end{
+	color: #cccccc !important;
+}
+
 .code-styler .markdown-source-view .HyperMD-codeblock[class*='code-styler-line'] {
-	overflow: hidden;
+	/* overflow: hidden; CHANGES TODO */
 	padding: 0 !important;
 	padding-left: var(--size-4-4) !important;
 	background: linear-gradient(90deg, var(--gradient-background-colour) var(--gradient-highlights-colour-stop), transparent 100%), var(--code-styler-codeblock-background-colour) !important;
 }
-.code-styler .markdown-source-view .HyperMD-codeblock[class*='code-styler-line'][class*='language-'] {
-	background: linear-gradient(90deg, var(--language-border-colour), var(--language-border-colour) var(--language-border-width), var(--gradient-background-colour) var(--language-border-width) var(--gradient-highlights-colour-stop), transparent 100%), var(--code-styler-codeblock-background-colour) !important;
+.code-styler .markdown-source-view .HyperMD-codeblock[class*=code-styler-line][class*=language-] {
+	background:
+	var(--code-styler-codeblock-background-colour) !important;
+  
+	border-left: 
+	var(--language-border-width) solid var(--language-border-colour) !important;
+  
+	border-right: 
+	var(--language-border-width) solid var(--language-border-colour) !important;
+  }
+  
+.code-styler .markdown-source-view .HyperMD-codeblock-begin[class*=code-styler-line][class*=language-] {
+	border-top: 
+	var(--language-border-width) solid var(--language-border-colour) !important;
 }
+
+.code-styler .markdown-source-view .HyperMD-codeblock-end[class*=code-styler-line][class*=language-] {
+	border-bottom: 
+	var(--language-border-width) solid var(--language-border-colour) !important;
+}
+
+
 .code-styler .markdown-source-view .HyperMD-codeblock[class*='code-styler-line'][class*='language-'] .code-styler-line-number {
 	margin-left: var(--language-border-width);
 }
@@ -174,10 +202,38 @@ body .code-styler-header-container-hidden {
 	border-top: var(--code-styler-header-border);
 	border-right: var(--code-styler-header-border);
 	border-left: var(--code-styler-header-border);
-	background: linear-gradient(var(--code-styler-header-background-colour) 0%,var(--code-styler-header-background-colour) calc(100% - var(--header-separator-width)), var(--code-styler-header-separator-colour) calc(100% - var(--header-separator-width)), var(--code-styler-header-separator-colour) 100%) var(--language-border-width) bottom/100% border-box no-repeat,var(--language-border-colour) !important;
+  
+	
+	background:
+	  linear-gradient(
+		var(--code-styler-header-background-colour) 0%,
+		var(--code-styler-header-background-colour) calc(100% - var(--header-separator-width)),
+		var(--code-styler-header-separator-colour) calc(100% - var(--header-separator-width)),
+		var(--code-styler-header-separator-colour) 100%) var(--language-border-width) bottom/100% border-box no-repeat,
+	  var(--language-border-colour) !important;
 	border-top-left-radius: var(--border-radius);
 	border-top-right-radius: var(--border-radius);
+  
+  
+	background:
+	var(--code-styler-codeblock-background-colour) !important;
+  
+	border-top: 
+	  var(--language-border-width) solid var(--language-border-colour) !important;
+  
+  
+	border-right: 
+	  var(--language-border-width) solid var(--language-border-colour) !important;
+  
+	border-left: 
+	  var(--language-border-width) solid var(--language-border-colour) !important;
+  
+	border-bottom: 
+	  var(--header-separator-width) solid var(--code-styler-header-separator-colour) !important;
+  
 }
+
+
 pre.code-styler-pre .code-styler-header-container {
 	border-bottom: var(--header-separator-width) solid var(--code-styler-header-separator-colour);
 	background-color: var(--code-styler-header-background-colour);
@@ -351,7 +407,7 @@ pre.code-styler-pre div > [class*='code-styler-line-number'],
 	left: 0;
 	display: inline-block;
 	min-width: calc(var(--line-number-gutter-min-width) - 12px);
-	height: 100%;
+	height: calc(100% - var(--line-number-height-correction));
 	box-sizing: content-box;
 	padding-top: var(--line-number-height-correction);
 	direction: rtl;
@@ -368,6 +424,7 @@ pre.code-styler-pre .code-styler-line-number {
 	border-top: var(--line-number-height-correction) solid transparent;
 	grid-column: 1;
 	white-space: nowrap;
+	user-select: none;
 }
 pre.code-styler-pre div:last-child > .code-styler-line-number {
 	width: unset;

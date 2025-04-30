@@ -31,6 +31,7 @@ export interface CodeblockParameters {
 	},
 	ignore: boolean;
 	special?: boolean;
+	text?: string;
 	externalReference?: Reference;
 }
 export interface Highlights {
@@ -99,6 +100,8 @@ async function parseCodeblock(codeblockLines: Array<string>, plugin: CodeStylerP
 
 	if (isCodeblockIgnored(codeblockParameters.language,plugin.settings.processedCodeblocksWhitelist) && codeblockParameters.language !== "reference")
 		return null;
+
+	codeblockParameters.text=codeblockLines.join();
 
 	return await (typeof sourcePath !== "undefined"?pluginAdjustParameters(codeblockParameters,plugin,plugins,codeblockLines,sourcePath):pluginAdjustParameters(codeblockParameters,plugin,plugins,codeblockLines));
 }

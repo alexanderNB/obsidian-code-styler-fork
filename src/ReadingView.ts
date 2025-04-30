@@ -15,142 +15,6 @@ import { PassThrough } from "stream";
 
 
 
-// export async function addCssClasses() : Promise<DecorationSet> {
-	
-// 	let file = this.app.workspace.getActiveFile();
-// 	if (!file) return;
-// 	let doc = await this.app.vault.read(file);
-
-
-// 	let start = 0
-// 	const builder = new RangeSetBuilder<Decoration>();
-
-// 	let regex = RegExp("wtf", "g");
-// 	// Create dictionary
-// 	let dictionary: Record<string, string> = {
-// 		",": "cm-hmd-codeblock cm-operator",
-// 		":": "cm-hmd-codeblock cm-operator",
-// 		"def": "cm-hmd-codeblock cm-keyword2",
-// 		"True": "cm-hmd-codeblock cm-keyword2",
-// 		"False": "cm-hmd-codeblock cm-keyword2",
-// 		"lambda": "cm-hmd-codeblock cm-keyword2",
-// 		"print": "cm-hmd-codeblock cm-function",
-// 		"input": "cm-hmd-codeblock cm-function",
-// 		"display": "cm-hmd-codeblock cm-function",
-// 		"symbols": "cm-hmd-codeblock cm-function",
-// 		"(": "bracket+",
-// 		"[": "bracket+",
-// 		"{": "bracket+",
-// 		")": "bracket-",
-// 		"]": "bracket-",
-// 		"}": "bracket-",
-// 		"Matrix": "cm-hmd-codeblock cm-class",
-// 	};
-
-// 	let allCode = doc.split(/```(p|P)ython/);
-// 	let actualAllCode = "";
-
-
-// 	for (let i = 1; i < allCode.length; i++){
-// 		actualAllCode += allCode[i].split("```")[0]
-// 	}
-
-// 	const functionsFinder = /def .*\(/g
-// 	let functionMatches = actualAllCode.match(functionsFinder)
-// 	if (functionMatches){
-// 		for (let i = 0; i < functionMatches.length; i++){
-// 			let functionMatch = functionMatches.at(i)
-// 			if (!functionMatch) continue;
-// 			functionMatch = functionMatch.substring(4)
-// 			functionMatch = functionMatch.substring(0, functionMatch.length-1)
-// 			if (dictionary[functionMatch]) continue;
-// 			dictionary[functionMatch] = "cm-hmd-codeblock cm-function"
-// 		}
-// 	}
-
-// 	let bracketClasses: Record<number, string> = {
-// 		0: "cm-hmd-codeblock cm-bracket1",
-// 		1: "cm-hmd-codeblock cm-bracket2",
-// 		2: "cm-hmd-codeblock cm-bracket3",
-// 	};
-
-// 	for (const [key] of Object.entries(dictionary)) {
-// 		let actual = key.replace(/[-\/\\^$.*+?()[\]{}|]/g, '\\$&'); // Escape special characters
-// 		if (regex.source === "wtf")
-// 			regex = new RegExp(actual, "g")
-// 		else
-// 			regex = new RegExp(regex.source + "|" + actual, "g")
-// 	}
-
-
-// 	while (true){
-// 		let beginIndex = doc.toLowerCase().indexOf("```python")
-// 		if (beginIndex === -1) {
-// 			break;
-// 		}
-		
-// 		doc = doc.substring(beginIndex+9)
-// 		start += beginIndex+9
-
-// 		let currentCodeBlock = doc.split("\n```")[0]
-		
-
-		
-// 		let matches = currentCodeBlock.match(regex)
-// 		if (!matches) break;
-	
-// 		let bracketCounter = 0;
-
-// 		let cssClass = "";
-
-// 		for(let i = 0; i < matches.length; i++){
-
-// 			let match = matches.at(i)
-// 			if (!match) break;
-// 			let from = start + currentCodeBlock.indexOf(match)
-// 			let to = from + match.length
-			
-// 			const functionRegex = /^[a-zA-Z0-9_]+$/
-
-// 			const isValid = functionRegex.test(match)
-// 			if (isValid){
-// 				const before = currentCodeBlock.charAt(from-start-1)
-// 				const after = currentCodeBlock.charAt(to-start)
-// 				if (functionRegex.test(before) || functionRegex.test(after)){
-// 					continue;
-// 				}
-// 			}
-
-
-
-// 			if (dictionary[match] === "bracket+") {
-// 				cssClass = bracketClasses[bracketCounter % 3]
-// 				bracketCounter++
-// 			}
-// 			else if (dictionary[match] === "bracket-") {
-// 				bracketCounter--
-// 				if (bracketCounter < 0) continue;
-// 				cssClass = bracketClasses[bracketCounter % 3]
-// 			}
-// 			else{
-// 				cssClass = dictionary[match]
-// 			}
-
-// 			builder.add(
-// 				from,
-// 				to,
-// 				Decoration.mark({ class: cssClass })
-// 			);
-
-// 			doc = doc.substring(to - start)
-// 			currentCodeBlock = currentCodeBlock.substring(to - start)
-// 			start += to - start
-// 		}
-// 	}
-// 	return builder.finish();
-// }
-
-
 
 export async function readingViewCodeblockDecoratingPostProcessor(element: HTMLElement, {sourcePath,getSectionInfo,frontmatter}: {sourcePath: string, getSectionInfo: (element: HTMLElement) => MarkdownSectionInformation | null, frontmatter: FrontMatterCache | undefined}, plugin: CodeStylerPlugin, editingEmbeds = false) {
 	const cache: CachedMetadata | null = plugin.app.metadataCache.getCache(sourcePath);
@@ -465,11 +329,61 @@ async function getCodeblockPreElements(element: HTMLElement, specific: boolean,e
 
 async function getCodeblocksParameters(sourcePath: string, cache: CachedMetadata | null, plugin: CodeStylerPlugin, editingEmbeds: boolean, codeblockPreElements : HTMLElement[]): Promise<Array<CodeblockParameters>> {
 	let codeblocksParameters: Array<CodeblockParameters> = [];
-	let tempCodedBlockParameters: Array<CodeblockParameters> = [];
-	let fakecodeblocksParameters: Array<CodeblockParameters> = [];
-	let faketempCodedBlockParameters: Array<CodeblockParameters> = [];
+	let tempCodeBlockParameters: Array<CodeblockParameters> = [];
+	// let fakecodeblocksParameters: Array<CodeblockParameters> = [];
+	// let faketempCodeBlockParameters: Array<CodeblockParameters> = [];
+
+
+
+
 	const fileContentLines = await getFileContentLines(sourcePath,plugin);
 	// console.log(fileContentLines)
+
+	if (typeof cache?.sections !== "undefined") {
+		for (const section of cache.sections) {
+			if (!editingEmbeds || section.type === "code" || section.type === "callout") {
+				const parsedCodeblocksParameters = await parseCodeblockSource(fileContentLines.slice(section.position.start.line,section.position.end.line+1),plugin,sourcePath);
+
+				if (parsedCodeblocksParameters.codeblocksParameters.length === 1){
+					let potentialSigularCBParameters = parsedCodeblocksParameters.codeblocksParameters.at(0)
+					if (typeof potentialSigularCBParameters !== "undefined"){
+						if (potentialSigularCBParameters.special){
+							tempCodeBlockParameters.push(potentialSigularCBParameters)
+						}
+					}
+					continue;
+				}
+
+				if (tempCodeBlockParameters.length !== 0){
+					console.warn("Temp thing not 0 or 1 yes it's me who made this idk")
+					continue;
+				}
+
+				if (!editingEmbeds || parsedCodeblocksParameters.nested){
+
+					codeblocksParameters = codeblocksParameters.concat(parsedCodeblocksParameters.codeblocksParameters);
+				}
+					
+			}
+		}
+	} else
+		console.error(`Metadata cache not found for file: ${sourcePath}`);
+
+	
+	if (tempCodeBlockParameters.length != 0){
+		codeblocksParameters = tempCodeBlockParameters;
+	}
+
+	if (codeblocksParameters.length == codeblockPreElements.length) {
+		return codeblocksParameters;
+	}
+	else if (codeblocksParameters.length < codeblockPreElements.length) {
+		console.warn("found less codeblockparameters that codeblockPreElements, this case is unhandled (shouldn't be possible)")
+	}
+
+
+	let preCodeblocksParameters: Array<CodeblockParameters> = [];
+	let tempPreCodeBlockParameters: Array<CodeblockParameters> = [];
 
 	for (const codeblock of codeblockPreElements){
 		let codeblockLines = codeblock.innerText.split("\n")
@@ -482,65 +396,33 @@ async function getCodeblocksParameters(sourcePath: string, cache: CachedMetadata
 		
 		
 		codeblockLines.push("```")
-		const parsedCodeblocksParameters = await parseCodeblockSource(codeblockLines,plugin,sourcePath);
-		if (parsedCodeblocksParameters.codeblocksParameters.length === 1){
-			let potentialSigularCBParameters = parsedCodeblocksParameters.codeblocksParameters.at(0)
+		const parsedPreCodeblocksParameters = await parseCodeblockSource(codeblockLines,plugin,sourcePath);
+		if (parsedPreCodeblocksParameters.codeblocksParameters.length === 1){
+			let potentialSigularCBParameters = parsedPreCodeblocksParameters.codeblocksParameters.at(0)
 			if (typeof potentialSigularCBParameters !== "undefined"){
 				if (potentialSigularCBParameters.special){
-					tempCodedBlockParameters.push(potentialSigularCBParameters)
+					tempPreCodeBlockParameters.push(potentialSigularCBParameters)
 				}
 			}
 			continue;
 		}
 
-		if (tempCodedBlockParameters.length !== 0){
+		if (tempPreCodeBlockParameters.length !== 0){
 			console.warn("Temp thing not 0 yes it's me who made this idk")
 			continue;
 		}
 
-		if (!editingEmbeds || parsedCodeblocksParameters.nested){
-			codeblocksParameters = codeblocksParameters.concat(parsedCodeblocksParameters.codeblocksParameters);
-		}
+		if (!editingEmbeds || parsedPreCodeblocksParameters.nested){
+			preCodeblocksParameters = preCodeblocksParameters.concat(parsedCodeblocksParameters.codeblocksParameters);
+		}		
 	}
-
-
-
-	if (typeof cache?.sections !== "undefined") {
-		for (const section of cache.sections) {
-			if (!editingEmbeds || section.type === "code" || section.type === "callout") {
-				// const parsedCodeblocksParameters = await parseCodeblockSource(fileContentLines.slice(section.position.start.line,section.position.end.line+1),plugin,sourcePath);
-
-				// if (parsedCodeblocksParameters.codeblocksParameters.length === 1){
-				// 	let potentialSigularCBParameters = parsedCodeblocksParameters.codeblocksParameters.at(0)
-				// 	if (typeof potentialSigularCBParameters !== "undefined"){
-				// 		if (potentialSigularCBParameters.special){
-				// 			faketempCodedBlockParameters.push(potentialSigularCBParameters)
-				// 		}
-				// 	}
-				// 	continue;
-				// }
-
-				// if (faketempCodedBlockParameters.length !== 0){
-				// 	console.warn("Temp thing not 0 yes it's me who made this idk")
-				// 	continue;
-				// }
-
-				// if (!editingEmbeds || parsedCodeblocksParameters.nested){
-
-				// 	fakecodeblocksParameters = fakecodeblocksParameters.concat(parsedCodeblocksParameters.codeblocksParameters);
-				// }
-					
-			}
-		}
-	} else
-		console.error(`Metadata cache not found for file: ${sourcePath}`);
-
-
-
-	if (tempCodedBlockParameters.length !== 0){
-		codeblocksParameters = tempCodedBlockParameters;
+	if (tempPreCodeBlockParameters.length != 0){
+		preCodeblocksParameters = tempPreCodeBlockParameters;
 	}
-	return codeblocksParameters;
+	return preCodeblocksParameters
+
+	
+
 }
 function insertHeader(codeblockPreElement: HTMLElement, codeblockParameters: CodeblockParameters, sourcePath: string, plugin: CodeStylerPlugin, dynamic: boolean): void {
 	console.log("Read header", codeblockPreElement, codeblockParameters)
@@ -687,7 +569,7 @@ let counter = 0;
 
 export const executeCodeMutationObserver = new MutationObserver((mutations) => {
 	mutations.forEach((mutation: MutationRecord) => {
-		// console.log("Mutation detected",mutation, (mutation.target as HTMLElement), (mutation.target as HTMLElement).tagName);
+		console.log("Mutation detsected",mutation, (mutation.target as HTMLElement), (mutation.target as HTMLElement).tagName);
 
 
 		if (mutation.type === "childList" && (mutation.target as HTMLElement).tagName === "PRE") { // Add execute code output
