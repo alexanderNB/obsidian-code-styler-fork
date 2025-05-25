@@ -173,6 +173,7 @@ async function remakeCodeblock(codeblockCodeElement: HTMLElement, codeblockPreEl
 	};
 
 	let bracketCounter = 0
+	let isClass = false;
 	Array.from(codeblockCodeElement.childNodes).forEach((node: ChildNode) => {
 		if (node.nodeType === Node.TEXT_NODE) {
 			// console.log("Text node", node)
@@ -187,6 +188,7 @@ async function remakeCodeblock(codeblockCodeElement: HTMLElement, codeblockPreEl
 			textContentLines.forEach(element => {
 				if (!firstLine){
 					element = "\n" + element;
+					isClass = false;
 				}
 				else{
 					firstLine = false
@@ -208,7 +210,10 @@ async function remakeCodeblock(codeblockCodeElement: HTMLElement, codeblockPreEl
 					const spanPart = document.createElement("span");
 					spanPart.textContent = element;
 					let cssClass = dictionary[element.trim()]
-					if (cssClass){
+					if (isClass){
+						spanPart.classList = "cm-hmd-codeblock cm-class";
+					}
+					else if (cssClass){
 						spanPart.classList = cssClass;
 					}
 					else if (element === element.toUpperCase()){
@@ -233,7 +238,8 @@ async function remakeCodeblock(codeblockCodeElement: HTMLElement, codeblockPreEl
 
 			
 			const element = node as HTMLElement;
-			// console.log("Element node", node, element.nextElementSibling, element.classList, element.innerHTML)
+			// console.log("Element node", node, element.classList, element.innerHTML)
+
 			if(element.classList.contains("keyword")){
 				if (element.innerHTML === "def"){
 					const nextElement = element.nextElementSibling;
@@ -241,11 +247,17 @@ async function remakeCodeblock(codeblockCodeElement: HTMLElement, codeblockPreEl
 						dictionary[nextElement.innerHTML] = "cm-hmd-codeblock cm-function"
 					}
 				}
+				else if (element.innerHTML === "from" || element.innerHTML === "import") {
+					isClass = !isClass;
+				}
 			}
 			else if(element.classList.contains("class-name")){
 				dictionary[element.innerHTML] = "cm-hmd-codeblock cm-class"
 			}
-			
+			if (isClass && !["from", "import", "as", "."].contains(element.innerHTML)) {
+				isClass = false;
+			}
+
 
 
 			let cssClass = dictionary[element.innerHTML];
@@ -262,8 +274,6 @@ async function remakeCodeblock(codeblockCodeElement: HTMLElement, codeblockPreEl
 			element.classList = cssClass;
 		}
 	});
-
-
 
 	
 	insertHeader(codeblockPreElement,codeblockParameters,sourcePath,plugin,dynamic);
@@ -413,7 +423,7 @@ async function getCodeblocksParameters(sourcePath: string, cache: CachedMetadata
 		}
 
 		if (!editingEmbeds || parsedPreCodeblocksParameters.nested){
-			preCodeblocksParameters = preCodeblocksParameters.concat(parsedCodeblocksParameters.codeblocksParameters);
+			preCodeblocksParameters = preCodeblocksParameters.concat(parsedPreCodeblocksParameters.codeblocksParameters);
 		}		
 	}
 	if (tempPreCodeBlockParameters.length != 0){
@@ -425,7 +435,7 @@ async function getCodeblocksParameters(sourcePath: string, cache: CachedMetadata
 
 }
 function insertHeader(codeblockPreElement: HTMLElement, codeblockParameters: CodeblockParameters, sourcePath: string, plugin: CodeStylerPlugin, dynamic: boolean): void {
-	console.log("Read header", codeblockPreElement, codeblockParameters)
+	// console.log("Read header", codeblockPreElement, codeblockParameters)
 	const headerContainer = createHeader(codeblockParameters, plugin.settings.currentTheme.settings, sourcePath, plugin);
 	if (dynamic)
 		headerContainer.addEventListener("click",()=>{toggleFold(codeblockPreElement);}); // Add listener for header folding on click
@@ -569,7 +579,7 @@ let counter = 0;
 
 export const executeCodeMutationObserver = new MutationObserver((mutations) => {
 	mutations.forEach((mutation: MutationRecord) => {
-		console.log("Mutation detsected",mutation, (mutation.target as HTMLElement), (mutation.target as HTMLElement).tagName);
+		// console.log("Mutation detsected",mutation, (mutation.target as HTMLElement), (mutation.target as HTMLElement).tagName);
 
 
 		if (mutation.type === "childList" && (mutation.target as HTMLElement).tagName === "PRE") { // Add execute code output
@@ -588,7 +598,7 @@ export const executeCodeMutationObserver = new MutationObserver((mutations) => {
 				const target = "'d'";
 				counter += 1;
 				if (counter > 10) return; // Prevent infinite loop
-				console.log(counter)
+				// console.log(counter)
 				if (text.includes(target)) {
 					// Split the text into parts
 					const before = text.split(target)[0];
